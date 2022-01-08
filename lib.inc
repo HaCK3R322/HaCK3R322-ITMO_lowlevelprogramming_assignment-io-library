@@ -103,7 +103,7 @@ print_int:
 	mov r9,0x8000000000000000               ;set mask to r9 (in binary 1000...000) - we save only sign of number
     and r9, rax                             ;after AND, we have only sign of our number
     test r9, r9                             ;test number
-    jz .not_neg                             ;if ZF==1(if r9 != 0  <--> it's not negative) we just jump to print uint
+    jz .not_neg                             ;if ZF==1(if r9 != 0  <--> its not negative) we just jump to print uint
 
     push rax                                ;save rax (still contains number)
     mov  rdi, '-'                           ;set rdi '-' sign
