@@ -173,7 +173,7 @@ read_char:
 	mov rdi, stdin                          ;set input to std_in
 	mov rdx, 1                              ;length of string, in out case 0
 
-	push qword 0                            ;if we won't got anything, we'll pop 0
+	push 0                    		        ;if we won't got anything, we'll pop 0
 	mov rsi, rsp                            ;we will read to stack
 	syscall                                 ;read 1 char, if we can of course
 
