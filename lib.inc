@@ -1,7 +1,21 @@
+%define sys_exit 60
+%define sys_read 0
+%define sys_write 1
+
+%define stdin 0
+%define stdout 1
+
+%define newline 0xA
+%define whitespace 0x20
+%define tab 0x9
+
 section .text
 
 ; Принимает код возврата и завершает текущий процесс
-
+exit:
+    mov rax, sys_exit                       ; Exit system call number
+    syscall
+    ret
 
 ; указатель на строку хранится в rdi
 ; rsi - для вывода, принимает указатель на начало строки
@@ -22,13 +36,15 @@ string_length:
 ;Принимает указатель на нуль-терминированную строку (rdi), выводит её в stdout
 ;Первый символ строки находится по rdi
 print_string:
+	push rdi
 	call string_length                      ;get string length to rax
 	mov rsi, rdi                            ;syscall 1(print) reads first symbol from [rsi], mov rdi (first symbol) to rsi
 	mov rdx, rax                            ;syscall 1(print) reads length from rdx, mov rax (string length) on rdx
 
-	mov rax, 1                              ;syscall reads call number from rax, we set rax==1 -> std_out call
-	mov rdi, 1                              ;first argument of syscall takes from rdi, we set rdi==1 -> std_out
+	mov rax, stdout                         ;syscall reads call number from rax, we set rax==1 -> std_out call
+	mov rdi, stdout                         ;first argument of syscall takes from rdi, we set rdi==1 -> std_out
 	syscall                                 ;print
+	pop rdi
 	ret
 
 
@@ -39,20 +55,20 @@ print_char:
 	push rdi                                ;push symbol to stack, pointer(rsp) now set to symbol to print
 	mov rsi, rsp                            ;set pointer to symbol for print to rsi
 
-	mov rax, 1                              ;set syscall 1(std_out)
-	mov rdi, 1                              ;print to std_out
+	mov rax, stdout                         ;set syscall 1(std_out)
+	mov rdi, stdout                         ;print to std_out
 
 	mov rdx, 1                              ;length==1, 1 symbol
 
 	syscall
 
-	pop rdi                                 ;set rdi and rsp back - rsp is a called saved register
+	pop rdi                                 ;set rdi and rsp back - rsp is a callee saved register
 	ret
 
 
 ; Переводит строку (выводит символ с кодом 0xA)
 print_newline:
-	mov rdi, 0xA                            ;push to rdi \n symbol
+	mov rdi, newline                        ;push to rdi \n symbol
 	call print_char
 	ret
 
@@ -61,8 +77,8 @@ print_newline:
 ; Совет: выделите место в стеке и храните там результаты деления
 ; Не забудьте перевести цифры в их ASCII коды.
 print_uint:
-    push r13                                ;save r13 to stack (called-saved register)
-	push r12                                ;save r12 to stack (called-saved register)
+    push r13                                ;save r13 to stack (callee-saved register)
+	push r12                                ;save r12 to stack (callee-saved register)
 	mov r12, rsp                            ;save stack pointer to r12
 
 	mov rax, rdi                            ;mov to rax 8-byte number from arg(rdi)
@@ -76,7 +92,7 @@ print_uint:
 		mov r13, 10                         ;set r13 to 10
 		div r13                             ;rax/r13 -> quotient(rax) and remainder(rdx)
 
-		add rdx, 0x30                       ;translation to ASCII code of remainder(rdx)
+		add rdx, '0'                        ;translation to ASCII code of remainder(rdx)
 		dec rsp                             ;next stack cell
 		mov byte[rsp], dl                   ;save 8-bit char of rdx register <--> save our char
 
@@ -121,8 +137,6 @@ print_int:
 ; Принимает два указателя на нуль-терминированные строки, возвращает 1 если они равны, 0 иначе
 ;Функции принимают аргументы в rdi, rsi, rdx, rcx, r8 и r9
 string_equals:
-	xor rax, rax                            ;clear rax
-
 	.length_check:                          ;firstly we want to know if strings are length-equals
 		call string_length                  ;get length of first string to rax
 		mov r9, rax                         ;save first string length to r9
@@ -155,11 +169,11 @@ string_equals:
 
 ; Читает один символ из stdin и возвращает его. Возвращает 0 если достигнут конец потока
 read_char:
-	mov rax, 0                              ;set syscall 0 (std_in)
-	mov rdi, 0                              ;set input to std_in
+	mov rax, stdin                          ;set syscall 0 (std_in)
+	mov rdi, stdin                          ;set input to std_in
 	mov rdx, 1                              ;length of string, in out case 0
 
-	push 0                                  ;if we won't got anything, we'll pop 0
+	push qword 0                            ;if we won't got anything, we'll pop 0
 	mov rsi, rsp                            ;we will read to stack
 	syscall                                 ;read 1 char, if we can of course
 
@@ -185,14 +199,14 @@ read_word:
     .read_word_loop:
         call read_char                      ;read char
 
-        cmp al, 0x20 		                ;compare char from rax with 0x20(space)
+        cmp al, whitespace	                ;compare char from rax with 0x20(space)
         je .space_symbol                    ;if equals
-        cmp al, 0x9                         ;tab
+        cmp al, tab                         ;tab
         je .space_symbol
-        cmp al, 0xA			                ;newline
+        cmp al, newline 	                ;newline
         je .space_symbol
 
-        cmp rax, 0                          ;if we got EOF
+        cmp rax, '\0'                       ;if we got EOF
         je .return
 
         mov [r8 + r10], rax                 ;save char to [buffer start + number of symbols]
@@ -308,22 +322,4 @@ string_copy:
 	.return:
 		inc rax                             
 		ret
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
