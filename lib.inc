@@ -206,7 +206,7 @@ read_word:
         cmp al, newline 	                ;newline
         je .space_symbol
 
-        cmp rax, '\0'                       ;if we got EOF
+        cmp rax, 0							;if we got EOF
         je .return
 
         mov [r8 + r10], rax                 ;save char to [buffer start + number of symbols]
